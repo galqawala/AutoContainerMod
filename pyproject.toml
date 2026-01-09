@@ -9,7 +9,7 @@ name = "galqawala"
 name = "AutoContainerMod"
 supported_games = [ "BL1",]
 coop_support = "ClientSide"
-download = "https://github.com/galqawala/AutoContainerMod/releases/latest/download/AutoContainerMod.sdkmod"
+download = "https://github.com/galqawala/AutoContainerMod/raw/refs/heads/master/AutoContainerMod.sdkmod"
 
 [tool.sdkmod.license]
 name = "GPL3"
