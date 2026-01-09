@@ -10,7 +10,6 @@ build/
 
 # Mod specific
 logs/
-*.sdkmod
 
 # IDE
 .vscode/
