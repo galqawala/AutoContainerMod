@@ -10,10 +10,6 @@ COOLDOWN_SECONDS = 30
 
 open_range = SliderOption("Open Range", 300, 100, 1000, 50)
 
-# Cache containers
-cached_containers = []
-last_cache_time = 0
-CACHE_INTERVAL = 5.0
 tick_counter = 0
 
 
@@ -52,43 +48,60 @@ def on_player_tick(obj, __args, __ret, __func):
         return
     
     current_time = time.time()
-    
-    # Refresh container cache periodically
-    if current_time - last_cache_time > CACHE_INTERVAL:
+
+    # Always query fresh objects to avoid stale pointers across map transitions (fast travel)
+    try:
         all_objects = unrealsdk.find_all("WillowInteractiveObject")
-        cached_containers = [obj for obj in all_objects if obj]
-        last_cache_time = current_time
-    
-    # Check each container
-    for container in cached_containers:
-        # Skip map transits
-        if is_map_transit(container):
+    except Exception as e:
+        logging.error(f"[AutoContainer] find_all failed: {e}")
+        return
+
+    # Filter only objects that look usable right now
+    valid_containers = [obj for obj in all_objects if obj and hasattr(obj, "Location") and hasattr(obj, "UsedBy") and callable(getattr(obj, "UsedBy", None))]
+    logging.info(f"[AutoContainer] Checking {len(valid_containers)} containers...")
+
+    current_container_ids = set()
+    for container in valid_containers:
+        current_container_ids.add(id(container))
+        logging.info(f"[AutoContainer] Checking container: {container}")
+
+        # Skip map transits (guard with try/except in case of odd objects)
+        try:
+            if is_map_transit(container):
+                continue
+        except Exception as e:
+            logging.warning(f"[AutoContainer] is_map_transit check failed: {e}")
             continue
-        
+
         # Check location and distance
         obj_location = getattr(container, "Location", None)
         if not obj_location:
             continue
-        
+
         distance = get_distance(obj_location, pawn_location)
         if distance > open_range.value:
             continue
-        
+
         # Check cooldown
         container_id = id(container)
-        if container_id in attempted_containers:
-            if current_time - attempted_containers[container_id] < COOLDOWN_SECONDS:
-                continue
-        
-        # Try to open
-        if hasattr(container, "UsedBy") and callable(container.UsedBy):
-            try:
-                container.UsedBy(pc.Pawn)
-                obj_name = getattr(container, "Name", "Unknown")
-                logging.info(f"[AutoContainer] Opened {obj_name}")
-                attempted_containers[container_id] = current_time
-            except Exception as e:
-                logging.error(f"[AutoContainer] Failed to open: {e}")
+        last_attempt = attempted_containers.get(container_id)
+        if last_attempt and (current_time - last_attempt) < COOLDOWN_SECONDS:
+            continue
 
+        # Try to open
+        try:
+            obj_name = getattr(container, "Name", "Unknown")
+            logging.info(f"[AutoContainer] Opening {obj_name}")
+            container.UsedBy(pc.Pawn)
+            attempted_containers[container_id] = current_time
+        except Exception as e:
+            logging.error(f"[AutoContainer] Failed to open: {e}")
+
+    # Prune cooldown entries for containers no longer present
+    stale_ids = [cid for cid in list(attempted_containers.keys()) if cid not in current_container_ids]
+    for cid in stale_ids:
+        del attempted_containers[cid]
+
+    logging.info(f"[AutoContainer] containers processed.")
 
 build_mod()
