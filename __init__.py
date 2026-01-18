@@ -8,7 +8,7 @@ import time
 attempted_containers = {}
 COOLDOWN_SECONDS = 30
 
-open_range = SliderOption("Open Range", 300, 100, 1000, 50)
+open_range = SliderOption("Open Range", 600, 100, 1000, 50)
 
 tick_counter = 0
 
