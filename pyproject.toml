@@ -1,6 +1,6 @@
 [project]
 name = "AutoContainerMod"
-version = "1.0.69"
+version = "1.0.70"
 description = "Automatically opens containers (chests, lockers, etc.) when you get close to them.\nConfigurable range and can be toggled on/off.\n"
 [[project.authors]]
 name = "galqawala"

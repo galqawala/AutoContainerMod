@@ -8,7 +8,7 @@ import time
 attempted_containers = {}
 COOLDOWN_SECONDS = 30
 
-open_range = SliderOption("Open Range", 600, 100, 1000, 50)
+open_range = SliderOption("Open Range", 1000, 100, 2000, 50)
 
 tick_counter = 0
 
@@ -36,7 +36,7 @@ def on_player_tick(obj, __args, __ret, __func):
     global cached_containers, last_cache_time, tick_counter
     
     tick_counter += 1
-    if tick_counter % 30 != 0:  # Check every 30 ticks
+    if tick_counter % 60 != 0:
         return
     
     pc = get_pc()
