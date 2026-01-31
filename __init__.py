@@ -4,14 +4,8 @@ from unrealsdk import logging
 import unrealsdk
 import time
 
-# Cooldown tracking
-attempted_containers = {}
-COOLDOWN_SECONDS = 30
-
-open_range = SliderOption("Open Range", 1000, 100, 2000, 50)
-
+open_range = SliderOption("Open Range", 1000, 100, 2000, 100)
 tick_counter = 0
-
 
 def get_distance(a, b):
     """Calculate distance between two location structs."""
@@ -21,19 +15,19 @@ def get_distance(a, b):
     return (dx * dx + dy * dy + dz * dz) ** 0.5
 
 
-def is_map_transit(target):
-    """Check if object is a map transit using InteractiveObjectDefinition."""
+def is_treasure(target):
+    """Check if object is a treasure using InteractiveObjectDefinition."""
     interactive_def = getattr(target, "InteractiveObjectDefinition", None)
     if not interactive_def:
         return False
     def_str = str(interactive_def)
-    return "MapChangeObjects" in def_str or "MapChanger" in def_str
+    return def_str.startswith("InteractiveObjectDefinition'gd_Balance_Treasure.InteractiveObjects.")
 
 
 @hook("WillowGame.WillowPlayerController:PlayerTick", Type.POST)
 def on_player_tick(obj, __args, __ret, __func):
-    """Check for nearby containers to auto-open."""
-    global cached_containers, last_cache_time, tick_counter
+    """Check for nearby treasures to auto-open."""
+    global tick_counter
     
     tick_counter += 1
     if tick_counter % 60 != 0:
@@ -57,24 +51,11 @@ def on_player_tick(obj, __args, __ret, __func):
         return
 
     # Filter only objects that look usable right now
-    valid_containers = [obj for obj in all_objects if obj and hasattr(obj, "Location") and hasattr(obj, "UsedBy") and callable(getattr(obj, "UsedBy", None))]
-    logging.info(f"[AutoContainer] Checking {len(valid_containers)} containers...")
+    valid_treasures = [obj for obj in all_objects if is_treasure(obj)]
 
-    current_container_ids = set()
-    for container in valid_containers:
-        current_container_ids.add(id(container))
-        logging.info(f"[AutoContainer] Checking container: {container}")
-
-        # Skip map transits (guard with try/except in case of odd objects)
-        try:
-            if is_map_transit(container):
-                continue
-        except Exception as e:
-            logging.warning(f"[AutoContainer] is_map_transit check failed: {e}")
-            continue
-
+    for treasure in valid_treasures:
         # Check location and distance
-        obj_location = getattr(container, "Location", None)
+        obj_location = getattr(treasure, "Location", None)
         if not obj_location:
             continue
 
@@ -82,26 +63,10 @@ def on_player_tick(obj, __args, __ret, __func):
         if distance > open_range.value:
             continue
 
-        # Check cooldown
-        container_id = id(container)
-        last_attempt = attempted_containers.get(container_id)
-        if last_attempt and (current_time - last_attempt) < COOLDOWN_SECONDS:
-            continue
-
         # Try to open
         try:
-            obj_name = getattr(container, "Name", "Unknown")
-            logging.info(f"[AutoContainer] Opening {obj_name}")
-            container.UsedBy(pc.Pawn)
-            attempted_containers[container_id] = current_time
+            treasure.UsedBy(pc.Pawn)
         except Exception as e:
             logging.error(f"[AutoContainer] Failed to open: {e}")
-
-    # Prune cooldown entries for containers no longer present
-    stale_ids = [cid for cid in list(attempted_containers.keys()) if cid not in current_container_ids]
-    for cid in stale_ids:
-        del attempted_containers[cid]
-
-    logging.info(f"[AutoContainer] containers processed.")
 
 build_mod()
