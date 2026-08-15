@@ -1,13 +1,13 @@
 [project]
 name = "AutoContainerMod"
-version = "1.0.78"
-description = "Automatically opens containers (chests, lockers, etc.) when you get close to them.\nConfigurable range and can be toggled on/off.\n"
+version = "1.0.80"
+description = "Automatically opens containers (chests, lockers, etc.) when you get close to them.\nConfigurable range.\n"
 [[project.authors]]
 name = "galqawala"
 
 [tool.sdkmod]
 name = "AutoContainerMod"
-supported_games = [ "BL1",]
+supported_games = [ "BL1", "BL1E",]
 coop_support = "ClientSide"
 download = "https://github.com/galqawala/AutoContainerMod/raw/refs/heads/master/AutoContainerMod.sdkmod"
 
