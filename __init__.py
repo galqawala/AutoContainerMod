@@ -5,6 +5,14 @@ import unrealsdk
 
 open_range = SliderOption("Open Range", 1000, 100, 2000, 100)
 tick_counter = 0
+# Same non-treasure objects (turrets, barrels, map changers, story props)
+# stay in range for as long as the player stands near them, and the
+# discovery log below used to fire every scan tick for every one of them -
+# confirmed spamming the log with dozens of repeats of the exact same
+# InteractiveObjectDefinition path per session. Logging each distinct path
+# once is enough to spot a missing treasure prefix; nothing is lost by not
+# repeating it.
+_logged_non_treasure = set()
 
 def get_distance(a, b):
     """Calculate distance between two location structs."""
@@ -72,11 +80,14 @@ def on_player_tick(obj, __args, __ret, __func):
             except Exception as e:
                 logging.error(f"[AutoContainer] Failed to open {interactive_def}: {e}")
         else:
-            # Logged for every in-range candidate this DIDN'T match, not just
-            # on failure - the whole point is to see the real
-            # InteractiveObjectDefinition path for containers this mod is
-            # currently missing (TREASURE_PACKAGE_PREFIXES is an allow-list,
-            # not exhaustive), rather than guessing at package names.
-            logging.info(f"[AutoContainer] in range but not a recognised treasure: {interactive_def}")
+            # Logged once per distinct InteractiveObjectDefinition path, not
+            # every tick - the whole point is to see the real path for
+            # containers this mod is currently missing (TREASURE_PACKAGE_
+            # PREFIXES is an allow-list, not exhaustive), rather than
+            # guessing at package names. See _logged_non_treasure above.
+            def_str = str(interactive_def)
+            if def_str not in _logged_non_treasure:
+                _logged_non_treasure.add(def_str)
+                logging.info(f"[AutoContainer] in range but not a recognised treasure: {def_str}")
 
 build_mod()
